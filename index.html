@@ -213,8 +213,8 @@ const SHEET_TAB = "Data"; // tab name in your Google Sheet
 // ───────────────────────────────────────────────────────────────────────────
 
 const fmt = n => {
-  if (typeof n !== "number") return "—";
-  return "S$" + Math.abs(n).toLocaleString("en-SG", { maximumFractionDigits: 0 });
+  if (typeof n !== "number" || isNaN(n)) return "—";
+  return "S$" + Math.abs(n).toLocaleString("en-SG", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 };
 
 const fmtDelta = n => {
@@ -388,7 +388,7 @@ function buildMainChart(data) {
           ticks: {
             color: "#444",
             font: { family: "'DM Mono', monospace", size: 10 },
-            callback: v => "S$" + (v >= 1000 ? (v/1000).toFixed(0)+"k" : v)
+            callback: v => "S$" + Number(v).toLocaleString("en-SG", { maximumFractionDigits: 0 })
           }
         }
       }
@@ -426,7 +426,7 @@ function buildBarChart(data) {
       },
       scales: {
         x: { grid: { display: false }, ticks: { color: "#444", font: { family: "'DM Mono', monospace", size: 10 }, maxRotation: 45 } },
-        y: { grid: { color: "#21262d" }, ticks: { color: "#444", font: { family: "'DM Mono', monospace", size: 10 }, callback: v => "S$"+(v>=1000?(v/1000).toFixed(0)+"k":v) } }
+        y: { grid: { color: "#21262d" }, ticks: { color: "#444", font: { family: "'DM Mono', monospace", size: 10 }, callback: v => "S$" + Number(v).toLocaleString("en-SG", { maximumFractionDigits: 0 }) } }
       }
     }
   });
