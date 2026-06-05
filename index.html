@@ -240,43 +240,48 @@ async function fetchSheetData() {
 }
 
 function parseCSV(text) {
-  const rows = text.trim().split("\n").map(r =>
-    r.split(",").map(c => c.replace(/^"|"$/g, "").trim())
-  );
+  // Properly parse CSV — handles quoted fields containing commas (e.g. "98,200")
+  function parseRow(line) {
+    const result = [];
+    let cur = "", inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQuotes = !inQuotes; }
+      else if (ch === ',' && !inQuotes) { result.push(cur.trim()); cur = ""; }
+      else { cur += ch; }
+    }
+    result.push(cur.trim());
+    return result;
+  }
 
-  // find header row — look for "Month"
-  let headerIdx = rows.findIndex(r => r[0].toLowerCase().includes("month") || r[0].toLowerCase().includes("jan") || r[0].toLowerCase().includes("feb"));
-  // try to find the actual data header
+  const rows = text.trim().split("\n").map(parseRow);
+
+  // find where data starts
   let dataStart = 0;
   for (let i = 0; i < rows.length; i++) {
     if (rows[i][0].toLowerCase().includes("month")) {
-      dataStart = i + 1;
-      break;
+      dataStart = i + 1; break;
     }
-    // if row starts with a month name like "Jan 2024"
     if (/^[A-Za-z]{3}\s+\d{4}/.test(rows[i][0])) {
-      dataStart = i;
-      break;
+      dataStart = i; break;
     }
   }
 
   const data = [];
   for (let i = dataStart; i < rows.length; i++) {
     const r = rows[i];
-    if (!r[0] || !/\d{4}/.test(r[0])) continue; // skip empty or non-month rows
-    const assets      = parseFloat(r[1]?.replace(/,/g,"")) || 0;
-    const liabilities = parseFloat(r[2]?.replace(/,/g,"")) || 0;
-    const income      = parseFloat(r[3]?.replace(/,/g,"")) || 0;
-    const expenses    = parseFloat(r[4]?.replace(/,/g,"")) || 0;
-    const pension     = parseFloat(r[5]?.replace(/,/g,"")) || 0;
+    if (!r[0] || !/\d{4}/.test(r[0])) continue;
+    // strip all commas and quotes before parsing numbers
+    const clean = v => parseFloat((v || "0").replace(/,/g, "").replace(/"/g, "")) || 0;
+    const assets      = clean(r[1]);
+    const liabilities = clean(r[2]);
+    const income      = clean(r[3]);
+    const expenses    = clean(r[4]);
+    const pension     = clean(r[5]);
     if (assets === 0 && liabilities === 0) continue;
     data.push({
-      month: r[0],
-      assets,
-      liabilities,
-      income,
-      expenses,
-      pension,
+      month: r[0].replace(/"/g, ""),
+      assets, liabilities, income, expenses, pension,
       netWorth: assets - liabilities,
     });
   }
