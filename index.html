@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>💰 Net Worth Tracker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Cormorant+Garamond:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --surface2: #1f2937;
+      --border:   #21262d;
+      --gold:     #d4a853;
+      --green:    #6db89a;
+      --red:      #e07b6b;
+      --blue:     #7ba7d4;
+      --purple:   #a0a0d4;
+      --text:     #f0ece4;
+      --sub:      #6b7280;
+      --mono:     'DM Mono', monospace;
+      --serif:    'Cormorant Garamond', Georgia, serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+
+    .wrap { max-width: 860px; margin: 0 auto; }
+
+    /* header */
+    .header { margin-bottom: 28px; }
+    .header .eyebrow { font-size: 10px; letter-spacing: 3px; color: var(--sub); margin-bottom: 6px; }
+    .header h1 { font-family: var(--serif); font-size: 36px; font-weight: 700; color: var(--text); line-height: 1.1; }
+    .header .sub { font-size: 12px; color: var(--sub); margin-top: 4px; }
+
+    /* loading */
+    #loading { text-align: center; padding: 80px 0; color: var(--sub); font-size: 13px; letter-spacing: 2px; }
+    #loading .spinner {
+      width: 32px; height: 32px; border: 2px solid var(--border);
+      border-top-color: var(--gold); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #app { display: none; }
+
+    /* summary cards */
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 24px; }
+    @media (max-width: 600px) { .cards { grid-template-columns: 1fr 1fr; } }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 16px;
+    }
+    .card .label { font-size: 9px; letter-spacing: 2px; color: var(--sub); margin-bottom: 6px; }
+    .card .value { font-family: var(--serif); font-size: 22px; font-weight: 700; line-height: 1.1; }
+    .card .since { font-size: 9px; color: var(--sub); margin-top: 4px; }
+
+    /* main chart card */
+    .chart-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 22px 20px; margin-bottom: 14px;
+    }
+
+    /* controls */
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
+    .date-group { display: flex; gap: 8px; align-items: center; }
+    .date-group span { font-size: 10px; color: var(--sub); letter-spacing: 1px; }
+    select {
+      background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 7px 10px; font-size: 12px; font-family: var(--mono);
+      cursor: pointer; appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+      padding-right: 28px;
+    }
+    select option { background: #1f2937; }
+
+    /* delta badge */
+    .delta {
+      margin-left: auto; border-radius: 8px; padding: 7px 14px;
+      font-size: 12px; font-weight: 500; white-space: nowrap;
+    }
+    .delta.pos { background: #0d2b1a; border: 1px solid #1a4d2e; color: var(--green); }
+    .delta.neg { background: #2b0d0d; border: 1px solid #4d1a1a; color: var(--red); }
+    .delta.neu { background: var(--surface2); border: 1px solid var(--border); color: var(--sub); }
+
+    /* filter pills */
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .pill {
+      padding: 6px 14px; border-radius: 20px; font-size: 10px; letter-spacing: 1px;
+      font-family: var(--mono); cursor: pointer; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--sub);
+      transition: all 0.15s ease;
+    }
+    .pill:hover { opacity: 0.8; }
+    .pill.active { font-weight: 600; }
+
+    /* chart canvas */
+    .canvas-wrap { position: relative; height: 260px; }
+    @media (max-width: 600px) { .canvas-wrap { height: 200px; } }
+
+    /* bar chart card */
+    .bar-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 22px 20px;
+    }
+    .bar-card .section-label { font-size: 10px; letter-spacing: 2px; color: var(--sub); margin-bottom: 16px; }
+    .bar-canvas-wrap { position: relative; height: 160px; }
+
+    /* error */
+    #error-msg {
+      display: none; text-align: center; padding: 60px 20px;
+      color: var(--red); font-size: 13px; line-height: 1.8;
+    }
+
+    /* fade in */
+    .fade-in { animation: fadeUp 0.4s ease forwards; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <p class="eyebrow">FINANCE HUB · LIVE FROM GOOGLE SHEETS</p>
+    <h1>Financial Overview</h1>
+    <p class="sub" id="last-updated">Loading data...</p>
+  </div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    FETCHING YOUR DATA
+  </div>
+
+  <div id="error-msg">
+    ⚠️ Could not load data from Google Sheets.<br/>
+    Make sure the sheet is set to <strong>"Anyone with the link — Viewer"</strong><br/>
+    and the SHEET_ID in the code is correct.
+  </div>
+
+  <div id="app">
+
+    <!-- Summary cards -->
+    <div class="cards fade-in">
+      <div class="card">
+        <div class="label">NET WORTH</div>
+        <div class="value" id="card-nw" style="color: var(--gold)">—</div>
+        <div class="since" id="card-nw-date">—</div>
+      </div>
+      <div class="card">
+        <div class="label">TOTAL ASSETS</div>
+        <div class="value" id="card-assets" style="color: var(--green)">—</div>
+        <div class="since" id="card-assets-date">—</div>
+      </div>
+      <div class="card">
+        <div class="label">TOTAL LIABILITIES</div>
+        <div class="value" id="card-liab" style="color: var(--red)">—</div>
+        <div class="since" id="card-liab-date">—</div>
+      </div>
+    </div>
+
+    <!-- Main chart -->
+    <div class="chart-card fade-in">
+      <div class="controls">
+        <div class="date-group">
+          <span>FROM</span>
+          <select id="from-select"></select>
+        </div>
+        <div class="date-group">
+          <span>TO</span>
+          <select id="to-select"></select>
+        </div>
+        <div class="delta neu" id="delta-badge">— over period</div>
+      </div>
+
+      <div class="pills" id="pills">
+        <div class="pill active" data-key="netWorth" data-color="#d4a853">NET WORTH</div>
+        <div class="pill" data-key="assets"   data-color="#6db89a">ASSETS</div>
+        <div class="pill" data-key="liabilities" data-color="#e07b6b">LIABILITIES</div>
+        <div class="pill" data-key="income"   data-color="#7ba7d4">INCOME</div>
+        <div class="pill" data-key="expenses" data-color="#c47ab8">EXPENSES</div>
+        <div class="pill" data-key="pension"  data-color="#a0a0d4">PENSION</div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="main-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Bar chart -->
+    <div class="bar-card fade-in">
+      <div class="section-label">INCOME VS EXPENSES VS PENSION · SAME PERIOD</div>
+      <div class="bar-canvas-wrap">
+        <canvas id="bar-chart"></canvas>
+      </div>
+    </div>
+
+  </div><!-- /app -->
+</div><!-- /wrap -->
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const SHEET_ID  = "1TqVWY-7bBALX215xpJK0ZRtFstOWq4VElZuiFWbXb3M";
+const SHEET_TAB = "Data"; // tab name in your Google Sheet
+// ───────────────────────────────────────────────────────────────────────────
+
+const fmt = n => {
+  if (typeof n !== "number") return "—";
+  return "S$" + Math.abs(n).toLocaleString("en-SG", { maximumFractionDigits: 0 });
+};
+
+const fmtDelta = n => {
+  if (typeof n !== "number" || isNaN(n)) return "— over period";
+  const sign = n >= 0 ? "▲ +" : "▼ ";
+  return sign + fmt(n) + " over period";
+};
+
+let allData = [];
+let filteredData = [];
+let activeKey = "netWorth";
+let activeColor = "#d4a853";
+let mainChart = null;
+let barChart = null;
+
+// ── fetch from Google Sheets CSV export ────────────────────────────────────
+async function fetchSheetData() {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_TAB)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to fetch");
+  const text = await res.text();
+  return parseCSV(text);
+}
+
+function parseCSV(text) {
+  const rows = text.trim().split("\n").map(r =>
+    r.split(",").map(c => c.replace(/^"|"$/g, "").trim())
+  );
+
+  // find header row — look for "Month"
+  let headerIdx = rows.findIndex(r => r[0].toLowerCase().includes("month") || r[0].toLowerCase().includes("jan") || r[0].toLowerCase().includes("feb"));
+  // try to find the actual data header
+  let dataStart = 0;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i][0].toLowerCase().includes("month")) {
+      dataStart = i + 1;
+      break;
+    }
+    // if row starts with a month name like "Jan 2024"
+    if (/^[A-Za-z]{3}\s+\d{4}/.test(rows[i][0])) {
+      dataStart = i;
+      break;
+    }
+  }
+
+  const data = [];
+  for (let i = dataStart; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[0] || !/\d{4}/.test(r[0])) continue; // skip empty or non-month rows
+    const assets      = parseFloat(r[1]?.replace(/,/g,"")) || 0;
+    const liabilities = parseFloat(r[2]?.replace(/,/g,"")) || 0;
+    const income      = parseFloat(r[3]?.replace(/,/g,"")) || 0;
+    const expenses    = parseFloat(r[4]?.replace(/,/g,"")) || 0;
+    const pension     = parseFloat(r[5]?.replace(/,/g,"")) || 0;
+    if (assets === 0 && liabilities === 0) continue;
+    data.push({
+      month: r[0],
+      assets,
+      liabilities,
+      income,
+      expenses,
+      pension,
+      netWorth: assets - liabilities,
+    });
+  }
+  return data;
+}
+
+// ── populate selects ────────────────────────────────────────────────────────
+function populateSelects() {
+  const fromSel = document.getElementById("from-select");
+  const toSel   = document.getElementById("to-select");
+  fromSel.innerHTML = "";
+  toSel.innerHTML   = "";
+  allData.forEach((d, i) => {
+    const o1 = new Option(d.month, i);
+    const o2 = new Option(d.month, i);
+    fromSel.appendChild(o1);
+    toSel.appendChild(o2);
+  });
+  fromSel.value = 0;
+  toSel.value   = allData.length - 1;
+}
+
+// ── update summary cards ────────────────────────────────────────────────────
+function updateCards() {
+  const latest = allData[allData.length - 1];
+  if (!latest) return;
+  document.getElementById("card-nw").textContent     = fmt(latest.netWorth);
+  document.getElementById("card-assets").textContent = fmt(latest.assets);
+  document.getElementById("card-liab").textContent   = fmt(latest.liabilities);
+  const d = `as of ${latest.month}`;
+  document.getElementById("card-nw-date").textContent     = d;
+  document.getElementById("card-assets-date").textContent = d;
+  document.getElementById("card-liab-date").textContent   = d;
+  document.getElementById("last-updated").textContent = `Last entry: ${latest.month} · ${allData.length} months of data`;
+}
+
+// ── filter data ─────────────────────────────────────────────────────────────
+function getFiltered() {
+  const from = parseInt(document.getElementById("from-select").value);
+  const to   = parseInt(document.getElementById("to-select").value);
+  return allData.slice(Math.min(from,to), Math.max(from,to)+1);
+}
+
+// ── delta badge ─────────────────────────────────────────────────────────────
+function updateDelta(data) {
+  const badge = document.getElementById("delta-badge");
+  if (data.length < 2) { badge.textContent = "— over period"; badge.className = "delta neu"; return; }
+  const start = data[0][activeKey];
+  const end   = data[data.length-1][activeKey];
+  const diff  = end - start;
+  badge.textContent = fmtDelta(diff);
+  badge.className = "delta " + (diff > 0 ? "pos" : diff < 0 ? "neg" : "neu");
+}
+
+// ── main area chart ─────────────────────────────────────────────────────────
+function buildMainChart(data) {
+  const ctx = document.getElementById("main-chart").getContext("2d");
+  const labels = data.map(d => d.month);
+  const values = data.map(d => d[activeKey]);
+
+  const grad = ctx.createLinearGradient(0, 0, 0, 260);
+  grad.addColorStop(0, activeColor + "44");
+  grad.addColorStop(1, activeColor + "00");
+
+  if (mainChart) mainChart.destroy();
+  mainChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: activeColor,
+        borderWidth: 2,
+        fill: true,
+        backgroundColor: grad,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: activeColor,
+        pointHoverBorderColor: "#0d1117",
+        pointHoverBorderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#1a1a1a",
+          borderColor: "#333",
+          borderWidth: 1,
+          titleColor: "#888",
+          bodyColor: activeColor,
+          titleFont: { family: "'DM Mono', monospace", size: 11 },
+          bodyFont: { family: "'DM Mono', monospace", size: 13, weight: "600" },
+          callbacks: {
+            label: ctx => fmt(ctx.raw),
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: "#21262d" },
+          ticks: { color: "#444", font: { family: "'DM Mono', monospace", size: 10 }, maxRotation: 45 }
+        },
+        y: {
+          grid: { color: "#21262d" },
+          ticks: {
+            color: "#444",
+            font: { family: "'DM Mono', monospace", size: 10 },
+            callback: v => "S$" + (v >= 1000 ? (v/1000).toFixed(0)+"k" : v)
+          }
+        }
+      }
+    }
+  });
+}
+
+// ── bar chart ───────────────────────────────────────────────────────────────
+function buildBarChart(data) {
+  const ctx = document.getElementById("bar-chart").getContext("2d");
+  if (barChart) barChart.destroy();
+  barChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: data.map(d => d.month),
+      datasets: [
+        { label: "Income",   data: data.map(d => d.income),   backgroundColor: "#7ba7d4", borderRadius: 3 },
+        { label: "Expenses", data: data.map(d => d.expenses), backgroundColor: "#c47ab8", borderRadius: 3 },
+        { label: "Pension",  data: data.map(d => d.pension),  backgroundColor: "#a0a0d4", borderRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: "#666", font: { family: "'DM Mono', monospace", size: 11 }, boxWidth: 10 }
+        },
+        tooltip: {
+          backgroundColor: "#1a1a1a", borderColor: "#333", borderWidth: 1,
+          titleColor: "#888", bodyColor: "#ccc",
+          titleFont: { family: "'DM Mono', monospace", size: 11 },
+          bodyFont:  { family: "'DM Mono', monospace", size: 12 },
+          callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw)}` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: "#444", font: { family: "'DM Mono', monospace", size: 10 }, maxRotation: 45 } },
+        y: { grid: { color: "#21262d" }, ticks: { color: "#444", font: { family: "'DM Mono', monospace", size: 10 }, callback: v => "S$"+(v>=1000?(v/1000).toFixed(0)+"k":v) } }
+      }
+    }
+  });
+}
+
+// ── refresh all ─────────────────────────────────────────────────────────────
+function refresh() {
+  const data = getFiltered();
+  updateDelta(data);
+  buildMainChart(data);
+  buildBarChart(data);
+}
+
+// ── pill click ──────────────────────────────────────────────────────────────
+document.getElementById("pills").addEventListener("click", e => {
+  const pill = e.target.closest(".pill");
+  if (!pill) return;
+  document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+  pill.classList.add("active");
+  activeKey   = pill.dataset.key;
+  activeColor = pill.dataset.color;
+  // style active pill
+  pill.style.background = activeColor + "22";
+  pill.style.color      = activeColor;
+  pill.style.borderColor = activeColor;
+  // reset others
+  document.querySelectorAll(".pill:not(.active)").forEach(p => {
+    p.style.background   = "";
+    p.style.color        = "";
+    p.style.borderColor  = "";
+  });
+  refresh();
+});
+
+// ── select change ────────────────────────────────────────────────────────────
+document.getElementById("from-select").addEventListener("change", refresh);
+document.getElementById("to-select").addEventListener("change",   refresh);
+
+// ── init ────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    allData = await fetchSheetData();
+    if (!allData.length) throw new Error("No data found");
+
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("app").style.display     = "block";
+
+    populateSelects();
+    updateCards();
+    // style first pill
+    const firstPill = document.querySelector(".pill.active");
+    firstPill.style.background   = activeColor + "22";
+    firstPill.style.color        = activeColor;
+    firstPill.style.borderColor  = activeColor;
+    refresh();
+  } catch(err) {
+    document.getElementById("loading").style.display   = "none";
+    document.getElementById("error-msg").style.display = "block";
+    console.error(err);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
