@@ -19,6 +19,8 @@
       --red:      #e07b6b;
       --blue:     #7ba7d4;
       --purple:   #a0a0d4;
+      --teal:     #4ecdc4;
+      --orange:   #f7a072;
       --text:     #f0ece4;
       --sub:      #6b7280;
       --mono:     'DM Mono', monospace;
@@ -33,7 +35,7 @@
       padding: 24px 16px 48px;
     }
 
-    .wrap { max-width: 860px; margin: 0 auto; }
+    .wrap { max-width: 960px; margin: 0 auto; }
 
     /* header */
     .header { margin-bottom: 28px; }
@@ -62,6 +64,56 @@
     .card .label { font-size: 9px; letter-spacing: 2px; color: var(--sub); margin-bottom: 6px; }
     .card .value { font-family: var(--serif); font-size: 22px; font-weight: 700; line-height: 1.1; }
     .card .since { font-size: 9px; color: var(--sub); margin-top: 4px; }
+
+    /* fund breakdown section */
+    .funds-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px;
+    }
+    @media (max-width: 600px) { .funds-row { grid-template-columns: 1fr; } }
+
+    .fund-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px;
+    }
+    .fund-card .fund-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+    }
+    .fund-card .fund-title {
+      font-size: 10px; letter-spacing: 2px; color: var(--sub);
+    }
+    .fund-card .fund-total {
+      font-family: var(--serif); font-size: 20px; font-weight: 700;
+    }
+    .fund-card .fund-select-wrap {
+      position: relative; margin-bottom: 14px;
+    }
+    .fund-card select {
+      width: 100%;
+      background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 30px 8px 12px; font-size: 12px; font-family: var(--mono);
+      cursor: pointer; appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+    }
+    .fund-breakdown {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .fund-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .fund-row .fund-name {
+      font-size: 11px; color: var(--sub); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .fund-row .fund-bar-wrap {
+      flex: 2; background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden;
+    }
+    .fund-row .fund-bar {
+      height: 100%; border-radius: 4px; transition: width 0.4s ease;
+    }
+    .fund-row .fund-val {
+      font-size: 11px; font-weight: 500; min-width: 80px; text-align: right;
+    }
+    .fund-row.selected .fund-name { color: var(--text); font-weight: 500; }
 
     /* main chart card */
     .chart-card {
@@ -167,6 +219,53 @@
       </div>
     </div>
 
+    <!-- Liquid & Non-Liquid Funds -->
+    <div class="funds-row fade-in">
+
+      <!-- Liquid Funds -->
+      <div class="fund-card">
+        <div class="fund-header">
+          <span class="fund-title">LIQUID FUNDS</span>
+          <span class="fund-total" id="liquid-total" style="color: var(--teal)">—</span>
+        </div>
+        <div class="fund-select-wrap">
+          <select id="liquid-select">
+            <option value="all">All Liquid Funds</option>
+            <option value="ocbc">OCBC</option>
+            <option value="dbs">DBS</option>
+            <option value="cashsg">Cash Singapore</option>
+            <option value="liquidother">Others</option>
+          </select>
+        </div>
+        <div class="fund-breakdown" id="liquid-breakdown">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+      <!-- Non-Liquid Funds -->
+      <div class="fund-card">
+        <div class="fund-header">
+          <span class="fund-title">NON-LIQUID FUNDS</span>
+          <span class="fund-total" id="nonliquid-total" style="color: var(--orange)">—</span>
+        </div>
+        <div class="fund-select-wrap">
+          <select id="nonliquid-select">
+            <option value="all">All Non-Liquid Funds</option>
+            <option value="cpf">CPF</option>
+            <option value="epf">EPF</option>
+            <option value="moomoosg">Moomoo Investment SG</option>
+            <option value="mooomomy">Moomoo Investment MY</option>
+            <option value="webull">Webull</option>
+            <option value="nonliquidother">Others</option>
+          </select>
+        </div>
+        <div class="fund-breakdown" id="nonliquid-breakdown">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+    </div>
+
     <!-- Main chart -->
     <div class="chart-card fade-in">
       <div class="controls">
@@ -182,12 +281,12 @@
       </div>
 
       <div class="pills" id="pills">
-        <div class="pill active" data-key="netWorth" data-color="#d4a853">NET WORTH</div>
-        <div class="pill" data-key="assets"   data-color="#6db89a">ASSETS</div>
-        <div class="pill" data-key="liabilities" data-color="#e07b6b">LIABILITIES</div>
-        <div class="pill" data-key="income"   data-color="#7ba7d4">INCOME</div>
-        <div class="pill" data-key="expenses" data-color="#c47ab8">EXPENSES</div>
-        <div class="pill" data-key="pension"  data-color="#a0a0d4">PENSION</div>
+        <div class="pill active" data-key="netWorth"    data-color="#d4a853">NET WORTH</div>
+        <div class="pill"        data-key="assets"      data-color="#6db89a">ASSETS</div>
+        <div class="pill"        data-key="liabilities" data-color="#e07b6b">LIABILITIES</div>
+        <div class="pill"        data-key="liquid"      data-color="#4ecdc4">LIQUID FUNDS</div>
+        <div class="pill"        data-key="nonLiquid"   data-color="#f7a072">NON-LIQUID FUNDS</div>
+        <div class="pill"        data-key="pension"     data-color="#a0a0d4">PENSION</div>
       </div>
 
       <div class="canvas-wrap">
@@ -197,7 +296,7 @@
 
     <!-- Bar chart -->
     <div class="bar-card fade-in">
-      <div class="section-label">INCOME VS EXPENSES VS PENSION · SAME PERIOD</div>
+      <div class="section-label">LIQUID VS NON-LIQUID VS PENSION · SAME PERIOD</div>
       <div class="bar-canvas-wrap">
         <canvas id="bar-chart"></canvas>
       </div>
@@ -209,8 +308,40 @@
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 const SHEET_ID  = "1TqVWY-7bBALX215xpJK0ZRtFstOWq4VElZuiFWbXb3M";
-const SHEET_TAB = "Data"; // tab name in your Google Sheet
+const SHEET_TAB = "Data";
 // ───────────────────────────────────────────────────────────────────────────
+
+// ─── Liquid Fund sub-keys mapped to column indices (adjust if your sheet differs)
+// Sheet column order assumed:
+// 0: Month, 1: Assets, 2: Liabilities,
+// 3: OCBC, 4: DBS, 5: Cash SG, 6: Liquid Others,
+// 7: CPF, 8: EPF, 9: Moomoo SG, 10: Moomoo MY, 11: Webull, 12: Non-Liquid Others,
+// 13: Pension
+const COL = {
+  month:           0,
+  assets:          1,
+  liabilities:     2,
+  ocbc:            3,
+  dbs:             4,
+  cashsg:          5,
+  liquidother:     6,
+  cpf:             7,
+  epf:             8,
+  moomoosg:        9,
+  mooomomy:        10,
+  webull:          11,
+  nonliquidother:  12,
+  pension:         13,
+};
+
+const LIQUID_KEYS = ["ocbc","dbs","cashsg","liquidother"];
+const NONLIQUID_KEYS = ["cpf","epf","moomoosg","mooomomy","webull","nonliquidother"];
+
+const LIQUID_LABELS = { ocbc:"OCBC", dbs:"DBS", cashsg:"Cash SG", liquidother:"Others" };
+const NONLIQUID_LABELS = { cpf:"CPF", epf:"EPF", moomoosg:"Moomoo SG", mooomomy:"Moomoo MY", webull:"Webull", nonliquidother:"Others" };
+
+const LIQUID_COLORS    = ["#4ecdc4","#45b7aa","#3d9e96","#2d7872"];
+const NONLIQUID_COLORS = ["#f7a072","#e8865a","#d97040","#c55a28","#b04818","#8a3510"];
 
 const fmt = n => {
   if (typeof n !== "number" || isNaN(n)) return "—";
@@ -224,13 +355,12 @@ const fmtDelta = n => {
 };
 
 let allData = [];
-let filteredData = [];
 let activeKey = "netWorth";
 let activeColor = "#d4a853";
 let mainChart = null;
 let barChart = null;
 
-// ── fetch from Google Sheets CSV export ────────────────────────────────────
+// ── fetch from Google Sheets CSV export ───────────────────────────────────
 async function fetchSheetData() {
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_TAB)}`;
   const res = await fetch(url);
@@ -240,7 +370,6 @@ async function fetchSheetData() {
 }
 
 function parseCSV(text) {
-  // Properly parse CSV — handles quoted fields containing commas (e.g. "98,200")
   function parseRow(line) {
     const result = [];
     let cur = "", inQuotes = false;
@@ -256,55 +385,65 @@ function parseCSV(text) {
 
   const rows = text.trim().split("\n").map(parseRow);
 
-  // find where data starts
   let dataStart = 0;
   for (let i = 0; i < rows.length; i++) {
-    if (rows[i][0].toLowerCase().includes("month")) {
-      dataStart = i + 1; break;
-    }
-    if (/^[A-Za-z]{3}\s+\d{4}/.test(rows[i][0])) {
-      dataStart = i; break;
-    }
+    if (rows[i][0].toLowerCase().includes("month")) { dataStart = i + 1; break; }
+    if (/^[A-Za-z]{3}\s+\d{4}/.test(rows[i][0])) { dataStart = i; break; }
   }
+
+  const clean = v => parseFloat((v || "0").replace(/,/g, "").replace(/"/g, "")) || 0;
 
   const data = [];
   for (let i = dataStart; i < rows.length; i++) {
     const r = rows[i];
     if (!r[0] || !/\d{4}/.test(r[0])) continue;
-    // strip all commas and quotes before parsing numbers
-    const clean = v => parseFloat((v || "0").replace(/,/g, "").replace(/"/g, "")) || 0;
-    const assets      = clean(r[1]);
-    const liabilities = clean(r[2]);
-    const income      = clean(r[3]);
-    const expenses    = clean(r[4]);
-    const pension     = clean(r[5]);
+
+    const assets      = clean(r[COL.assets]);
+    const liabilities = clean(r[COL.liabilities]);
     if (assets === 0 && liabilities === 0) continue;
+
+    const ocbc           = clean(r[COL.ocbc]);
+    const dbs            = clean(r[COL.dbs]);
+    const cashsg         = clean(r[COL.cashsg]);
+    const liquidother    = clean(r[COL.liquidother]);
+    const cpf            = clean(r[COL.cpf]);
+    const epf            = clean(r[COL.epf]);
+    const moomoosg       = clean(r[COL.moomoosg]);
+    const mooomomy       = clean(r[COL.mooomomy]);
+    const webull         = clean(r[COL.webull]);
+    const nonliquidother = clean(r[COL.nonliquidother]);
+    const pension        = clean(r[COL.pension]);
+
+    const liquid    = ocbc + dbs + cashsg + liquidother;
+    const nonLiquid = cpf + epf + moomoosg + mooomomy + webull + nonliquidother;
+
     data.push({
       month: r[0].replace(/"/g, ""),
-      assets, liabilities, income, expenses, pension,
+      assets, liabilities,
+      ocbc, dbs, cashsg, liquidother,
+      cpf, epf, moomoosg, mooomomy, webull, nonliquidother,
+      pension, liquid, nonLiquid,
       netWorth: assets - liabilities,
     });
   }
   return data;
 }
 
-// ── populate selects ────────────────────────────────────────────────────────
+// ── populate selects ──────────────────────────────────────────────────────
 function populateSelects() {
   const fromSel = document.getElementById("from-select");
   const toSel   = document.getElementById("to-select");
   fromSel.innerHTML = "";
   toSel.innerHTML   = "";
   allData.forEach((d, i) => {
-    const o1 = new Option(d.month, i);
-    const o2 = new Option(d.month, i);
-    fromSel.appendChild(o1);
-    toSel.appendChild(o2);
+    fromSel.appendChild(new Option(d.month, i));
+    toSel.appendChild(new Option(d.month, i));
   });
   fromSel.value = 0;
   toSel.value   = allData.length - 1;
 }
 
-// ── update summary cards ────────────────────────────────────────────────────
+// ── update summary cards ──────────────────────────────────────────────────
 function updateCards() {
   const latest = allData[allData.length - 1];
   if (!latest) return;
@@ -312,36 +451,70 @@ function updateCards() {
   document.getElementById("card-assets").textContent = fmt(latest.assets);
   document.getElementById("card-liab").textContent   = fmt(latest.liabilities);
   const d = `as of ${latest.month}`;
-  document.getElementById("card-nw-date").textContent     = d;
-  document.getElementById("card-assets-date").textContent = d;
-  document.getElementById("card-liab-date").textContent   = d;
-  document.getElementById("last-updated").textContent = `Last entry: ${latest.month} · ${allData.length} months of data`;
+  ["card-nw-date","card-assets-date","card-liab-date"].forEach(id => {
+    document.getElementById(id).textContent = d;
+  });
+  document.getElementById("last-updated").textContent =
+    `Last entry: ${latest.month} · ${allData.length} months of data`;
 }
 
-// ── filter data ─────────────────────────────────────────────────────────────
+// ── update fund breakdowns ────────────────────────────────────────────────
+function updateFundBreakdowns() {
+  const latest = allData[allData.length - 1];
+  if (!latest) return;
+
+  document.getElementById("liquid-total").textContent    = fmt(latest.liquid);
+  document.getElementById("nonliquid-total").textContent = fmt(latest.nonLiquid);
+
+  renderFundBreakdown("liquid-breakdown", "liquid-select",
+    LIQUID_KEYS, LIQUID_LABELS, LIQUID_COLORS, latest, latest.liquid);
+
+  renderFundBreakdown("nonliquid-breakdown", "nonliquid-select",
+    NONLIQUID_KEYS, NONLIQUID_LABELS, NONLIQUID_COLORS, latest, latest.nonLiquid);
+}
+
+function renderFundBreakdown(containerId, selectId, keys, labels, colors, latest, total) {
+  const sel = document.getElementById(selectId).value;
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+
+  keys.forEach((k, i) => {
+    const val = latest[k] || 0;
+    if (sel !== "all" && sel !== k) return;
+
+    const pct = total > 0 ? (val / total) * 100 : 0;
+    const row = document.createElement("div");
+    row.className = "fund-row" + (sel === k ? " selected" : "");
+    row.innerHTML = `
+      <span class="fund-name">${labels[k]}</span>
+      <div class="fund-bar-wrap">
+        <div class="fund-bar" style="width:${pct.toFixed(1)}%; background:${colors[i]};"></div>
+      </div>
+      <span class="fund-val" style="color:${colors[i]}">${fmt(val)}</span>
+    `;
+    container.appendChild(row);
+  });
+}
+
+// ── filter data ───────────────────────────────────────────────────────────
 function getFiltered() {
   const from = parseInt(document.getElementById("from-select").value);
   const to   = parseInt(document.getElementById("to-select").value);
   return allData.slice(Math.min(from,to), Math.max(from,to)+1);
 }
 
-// ── delta badge ─────────────────────────────────────────────────────────────
+// ── delta badge ───────────────────────────────────────────────────────────
 function updateDelta(data) {
   const badge = document.getElementById("delta-badge");
   if (data.length < 2) { badge.textContent = "— over period"; badge.className = "delta neu"; return; }
-  const start = data[0][activeKey];
-  const end   = data[data.length-1][activeKey];
-  const diff  = end - start;
+  const diff = data[data.length-1][activeKey] - data[0][activeKey];
   badge.textContent = fmtDelta(diff);
   badge.className = "delta " + (diff > 0 ? "pos" : diff < 0 ? "neg" : "neu");
 }
 
-// ── main area chart ─────────────────────────────────────────────────────────
+// ── main area chart ───────────────────────────────────────────────────────
 function buildMainChart(data) {
   const ctx = document.getElementById("main-chart").getContext("2d");
-  const labels = data.map(d => d.month);
-  const values = data.map(d => d[activeKey]);
-
   const grad = ctx.createLinearGradient(0, 0, 0, 260);
   grad.addColorStop(0, activeColor + "44");
   grad.addColorStop(1, activeColor + "00");
@@ -350,9 +523,9 @@ function buildMainChart(data) {
   mainChart = new Chart(ctx, {
     type: "line",
     data: {
-      labels,
+      labels: data.map(d => d.month),
       datasets: [{
-        data: values,
+        data: data.map(d => d[activeKey]),
         borderColor: activeColor,
         borderWidth: 2,
         fill: true,
@@ -371,16 +544,11 @@ function buildMainChart(data) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "#1a1a1a",
-          borderColor: "#333",
-          borderWidth: 1,
-          titleColor: "#888",
-          bodyColor: activeColor,
+          backgroundColor: "#1a1a1a", borderColor: "#333", borderWidth: 1,
+          titleColor: "#888", bodyColor: activeColor,
           titleFont: { family: "'DM Mono', monospace", size: 11 },
-          bodyFont: { family: "'DM Mono', monospace", size: 13, weight: "600" },
-          callbacks: {
-            label: ctx => fmt(ctx.raw),
-          }
+          bodyFont:  { family: "'DM Mono', monospace", size: 13, weight: "600" },
+          callbacks: { label: ctx => fmt(ctx.raw) }
         }
       },
       scales: {
@@ -401,7 +569,7 @@ function buildMainChart(data) {
   });
 }
 
-// ── bar chart ───────────────────────────────────────────────────────────────
+// ── bar chart ─────────────────────────────────────────────────────────────
 function buildBarChart(data) {
   const ctx = document.getElementById("bar-chart").getContext("2d");
   if (barChart) barChart.destroy();
@@ -410,9 +578,9 @@ function buildBarChart(data) {
     data: {
       labels: data.map(d => d.month),
       datasets: [
-        { label: "Income",   data: data.map(d => d.income),   backgroundColor: "#7ba7d4", borderRadius: 3 },
-        { label: "Expenses", data: data.map(d => d.expenses), backgroundColor: "#c47ab8", borderRadius: 3 },
-        { label: "Pension",  data: data.map(d => d.pension),  backgroundColor: "#a0a0d4", borderRadius: 3 },
+        { label: "Liquid",      data: data.map(d => d.liquid),    backgroundColor: "#4ecdc4", borderRadius: 3 },
+        { label: "Non-Liquid",  data: data.map(d => d.nonLiquid), backgroundColor: "#f7a072", borderRadius: 3 },
+        { label: "Pension",     data: data.map(d => d.pension),   backgroundColor: "#a0a0d4", borderRadius: 3 },
       ]
     },
     options: {
@@ -437,7 +605,7 @@ function buildBarChart(data) {
   });
 }
 
-// ── refresh all ─────────────────────────────────────────────────────────────
+// ── refresh all ───────────────────────────────────────────────────────────
 function refresh() {
   const data = getFiltered();
   updateDelta(data);
@@ -445,32 +613,41 @@ function refresh() {
   buildBarChart(data);
 }
 
-// ── pill click ──────────────────────────────────────────────────────────────
+// ── pill click ────────────────────────────────────────────────────────────
 document.getElementById("pills").addEventListener("click", e => {
   const pill = e.target.closest(".pill");
   if (!pill) return;
-  document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".pill").forEach(p => {
+    p.classList.remove("active");
+    p.style.background = p.style.color = p.style.borderColor = "";
+  });
   pill.classList.add("active");
   activeKey   = pill.dataset.key;
   activeColor = pill.dataset.color;
-  // style active pill
-  pill.style.background = activeColor + "22";
-  pill.style.color      = activeColor;
-  pill.style.borderColor = activeColor;
-  // reset others
-  document.querySelectorAll(".pill:not(.active)").forEach(p => {
-    p.style.background   = "";
-    p.style.color        = "";
-    p.style.borderColor  = "";
-  });
+  pill.style.background   = activeColor + "22";
+  pill.style.color        = activeColor;
+  pill.style.borderColor  = activeColor;
   refresh();
 });
 
-// ── select change ────────────────────────────────────────────────────────────
+// ── fund select change ────────────────────────────────────────────────────
+document.getElementById("liquid-select").addEventListener("change", () => {
+  const latest = allData[allData.length - 1];
+  if (latest) renderFundBreakdown("liquid-breakdown","liquid-select",
+    LIQUID_KEYS, LIQUID_LABELS, LIQUID_COLORS, latest, latest.liquid);
+});
+
+document.getElementById("nonliquid-select").addEventListener("change", () => {
+  const latest = allData[allData.length - 1];
+  if (latest) renderFundBreakdown("nonliquid-breakdown","nonliquid-select",
+    NONLIQUID_KEYS, NONLIQUID_LABELS, NONLIQUID_COLORS, latest, latest.nonLiquid);
+});
+
+// ── date range change ─────────────────────────────────────────────────────
 document.getElementById("from-select").addEventListener("change", refresh);
 document.getElementById("to-select").addEventListener("change",   refresh);
 
-// ── init ────────────────────────────────────────────────────────────────────
+// ── init ──────────────────────────────────────────────────────────────────
 async function init() {
   try {
     allData = await fetchSheetData();
@@ -481,11 +658,12 @@ async function init() {
 
     populateSelects();
     updateCards();
-    // style first pill
+    updateFundBreakdowns();
+
     const firstPill = document.querySelector(".pill.active");
-    firstPill.style.background   = activeColor + "22";
-    firstPill.style.color        = activeColor;
-    firstPill.style.borderColor  = activeColor;
+    firstPill.style.background  = activeColor + "22";
+    firstPill.style.color       = activeColor;
+    firstPill.style.borderColor = activeColor;
     refresh();
   } catch(err) {
     document.getElementById("loading").style.display   = "none";
