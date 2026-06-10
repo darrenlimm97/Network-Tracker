@@ -57,6 +57,7 @@
     /* summary cards */
     .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 24px; }
     @media (max-width: 600px) { .cards { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 600px) { .cards { grid-template-columns: 1fr 1fr; } }
     .card {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 12px; padding: 14px 16px;
@@ -144,7 +145,20 @@
     .delta.neg { background: #2b0d0d; border: 1px solid #4d1a1a; color: var(--red); }
     .delta.neu { background: var(--surface2); border: 1px solid var(--border); color: var(--sub); }
 
-    /* active metric label */
+    /* ratio bar inside card */
+    .ratio-bar-wrap {
+      width: 100%; height: 6px; border-radius: 4px;
+      background: var(--surface2); overflow: hidden; margin-top: 6px;
+    }
+    .ratio-bar-fill {
+      height: 100%; border-radius: 4px;
+      background: linear-gradient(90deg, var(--teal), var(--orange));
+      transition: width 0.4s ease;
+    }
+    .ratio-labels {
+      display: flex; justify-content: space-between;
+      font-size: 9px; color: var(--sub); margin-top: 4px;
+    }
     .active-metric-label {
       font-size: 10px; letter-spacing: 2px; font-weight: 600;
       margin-bottom: 16px; padding: 2px 0;
@@ -199,19 +213,19 @@
     <!-- Summary cards -->
     <div class="cards fade-in">
       <div class="card">
-        <div class="label">NET WORTH</div>
-        <div class="value" id="card-nw" style="color: var(--gold)">—</div>
-        <div class="since" id="card-nw-date">—</div>
-      </div>
-      <div class="card">
         <div class="label">TOTAL ASSETS</div>
         <div class="value" id="card-assets" style="color: var(--green)">—</div>
         <div class="since" id="card-assets-date">—</div>
       </div>
       <div class="card">
-        <div class="label">TOTAL LIABILITIES</div>
-        <div class="value" id="card-liab" style="color: var(--red)">—</div>
-        <div class="since" id="card-liab-date">—</div>
+        <div class="label">MONTH-ON-MONTH</div>
+        <div class="value" id="card-mom">—</div>
+        <div class="since" id="card-mom-date">—</div>
+      </div>
+      <div class="card">
+        <div class="label">LIQUID / NON-LIQUID</div>
+        <div class="value" id="card-ratio" style="font-size:16px; padding-top:4px;">—</div>
+        <div class="since" id="card-ratio-bar" style="margin-top:8px;">—</div>
       </div>
     </div>
 
@@ -270,7 +284,6 @@
             <option value="mooomomy"  data-color="#c55a28">↳ Moomoo MY</option>
             <option value="webull"    data-color="#b04818">↳ Webull</option>
             <option value="nonliquidother" data-color="#8a3510">↳ Others (Non-Liquid)</option>
-            <option value="pension"   data-color="#a0a0d4">Pension</option>
           </select>
         </div>
         <div class="delta neu" id="delta-badge">— over period</div>
@@ -285,7 +298,7 @@
 
     <!-- Bar chart -->
     <div class="bar-card fade-in">
-      <div class="section-label">LIQUID VS NON-LIQUID VS PENSION · SAME PERIOD</div>
+      <div class="section-label">LIQUID VS NON-LIQUID · SAME PERIOD</div>
       <div class="bar-canvas-wrap">
         <canvas id="bar-chart"></canvas>
       </div>
@@ -435,14 +448,47 @@ function populateSelects() {
 // ── update summary cards ──────────────────────────────────────────────────
 function updateCards() {
   const latest = allData[allData.length - 1];
+  const prev   = allData[allData.length - 2];
   if (!latest) return;
-  document.getElementById("card-nw").textContent     = fmt(latest.netWorth);
-  document.getElementById("card-assets").textContent = fmt(latest.assets);
-  document.getElementById("card-liab").textContent   = fmt(latest.liabilities);
-  const d = `as of ${latest.month}`;
-  ["card-nw-date","card-assets-date","card-liab-date"].forEach(id => {
-    document.getElementById(id).textContent = d;
-  });
+
+  // Total Assets
+  document.getElementById("card-assets").textContent     = fmt(latest.assets);
+  document.getElementById("card-assets-date").textContent = `as of ${latest.month}`;
+
+  // Month-on-Month change
+  const momEl     = document.getElementById("card-mom");
+  const momDateEl = document.getElementById("card-mom-date");
+  if (prev) {
+    const diff = latest.assets - prev.assets;
+    const pct  = prev.assets > 0 ? ((diff / prev.assets) * 100).toFixed(1) : 0;
+    const sign  = diff >= 0 ? "▲ +" : "▼ ";
+    momEl.textContent      = sign + fmt(diff);
+    momEl.style.color      = diff >= 0 ? "var(--green)" : "var(--red)";
+    momDateEl.textContent  = `${prev.month} → ${latest.month} (${diff >= 0 ? "+" : ""}${pct}%)`;
+  } else {
+    momEl.textContent     = "—";
+    momEl.style.color     = "var(--sub)";
+    momDateEl.textContent = "no prior month";
+  }
+
+  // Liquid / Non-Liquid ratio
+  const total      = latest.liquid + latest.nonLiquid;
+  const liqPct     = total > 0 ? (latest.liquid / total * 100) : 50;
+  const nonLiqPct  = 100 - liqPct;
+  document.getElementById("card-ratio").innerHTML =
+    `<span style="color:var(--teal)">${liqPct.toFixed(0)}% L</span>` +
+    `<span style="color:var(--sub); font-size:12px; margin:0 6px">/</span>` +
+    `<span style="color:var(--orange)">${nonLiqPct.toFixed(0)}% NL</span>`;
+  document.getElementById("card-ratio-bar").innerHTML = `
+    <div class="ratio-bar-wrap">
+      <div class="ratio-bar-fill" style="width:${liqPct.toFixed(1)}%"></div>
+    </div>
+    <div class="ratio-labels">
+      <span style="color:var(--teal)">LIQUID ${fmt(latest.liquid)}</span>
+      <span style="color:var(--orange)">NON-LIQUID ${fmt(latest.nonLiquid)}</span>
+    </div>
+  `;
+
   document.getElementById("last-updated").textContent =
     `Last entry: ${latest.month} · ${allData.length} months of data`;
 }
@@ -566,7 +612,6 @@ function buildBarChart(data) {
       datasets: [
         { label: "Liquid",      data: data.map(d => d.liquid),    backgroundColor: "#4ecdc4", borderRadius: 3 },
         { label: "Non-Liquid",  data: data.map(d => d.nonLiquid), backgroundColor: "#f7a072", borderRadius: 3 },
-        { label: "Pension",     data: data.map(d => d.pension),   backgroundColor: "#a0a0d4", borderRadius: 3 },
       ]
     },
     options: {
