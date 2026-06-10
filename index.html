@@ -144,16 +144,12 @@
     .delta.neg { background: #2b0d0d; border: 1px solid #4d1a1a; color: var(--red); }
     .delta.neu { background: var(--surface2); border: 1px solid var(--border); color: var(--sub); }
 
-    /* filter pills */
-    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-    .pill {
-      padding: 6px 14px; border-radius: 20px; font-size: 10px; letter-spacing: 1px;
-      font-family: var(--mono); cursor: pointer; border: 1px solid var(--border);
-      background: var(--surface2); color: var(--sub);
-      transition: all 0.15s ease;
+    /* active metric label */
+    .active-metric-label {
+      font-size: 10px; letter-spacing: 2px; font-weight: 600;
+      margin-bottom: 16px; padding: 2px 0;
+      transition: color 0.2s ease;
     }
-    .pill:hover { opacity: 0.8; }
-    .pill.active { font-weight: 600; }
 
     /* chart canvas */
     .canvas-wrap { position: relative; height: 260px; }
@@ -228,15 +224,6 @@
           <span class="fund-title">LIQUID FUNDS</span>
           <span class="fund-total" id="liquid-total" style="color: var(--teal)">—</span>
         </div>
-        <div class="fund-select-wrap">
-          <select id="liquid-select">
-            <option value="all">All Liquid Funds</option>
-            <option value="ocbc">OCBC</option>
-            <option value="dbs">DBS</option>
-            <option value="cashsg">Cash Singapore</option>
-            <option value="liquidother">Others</option>
-          </select>
-        </div>
         <div class="fund-breakdown" id="liquid-breakdown">
           <!-- populated by JS -->
         </div>
@@ -247,17 +234,6 @@
         <div class="fund-header">
           <span class="fund-title">NON-LIQUID FUNDS</span>
           <span class="fund-total" id="nonliquid-total" style="color: var(--orange)">—</span>
-        </div>
-        <div class="fund-select-wrap">
-          <select id="nonliquid-select">
-            <option value="all">All Non-Liquid Funds</option>
-            <option value="cpf">CPF</option>
-            <option value="epf">EPF</option>
-            <option value="moomoosg">Moomoo Investment SG</option>
-            <option value="mooomomy">Moomoo Investment MY</option>
-            <option value="webull">Webull</option>
-            <option value="nonliquidother">Others</option>
-          </select>
         </div>
         <div class="fund-breakdown" id="nonliquid-breakdown">
           <!-- populated by JS -->
@@ -277,17 +253,30 @@
           <span>TO</span>
           <select id="to-select"></select>
         </div>
+        <div class="date-group">
+          <span>VIEW</span>
+          <select id="metric-select">
+            <option value="netWorth"  data-color="#d4a853">Net Worth</option>
+            <option value="assets"    data-color="#6db89a">Assets</option>
+            <option value="liquid"    data-color="#4ecdc4">Liquid Funds</option>
+            <option value="ocbc"      data-color="#4ecdc4">↳ OCBC</option>
+            <option value="dbs"       data-color="#45b7aa">↳ DBS</option>
+            <option value="cashsg"    data-color="#3d9e96">↳ Cash SG</option>
+            <option value="liquidother" data-color="#2d7872">↳ Others (Liquid)</option>
+            <option value="nonLiquid" data-color="#f7a072">Non-Liquid Funds</option>
+            <option value="cpf"       data-color="#f7a072">↳ CPF</option>
+            <option value="epf"       data-color="#e8865a">↳ EPF</option>
+            <option value="moomoosg"  data-color="#d97040">↳ Moomoo SG</option>
+            <option value="mooomomy"  data-color="#c55a28">↳ Moomoo MY</option>
+            <option value="webull"    data-color="#b04818">↳ Webull</option>
+            <option value="nonliquidother" data-color="#8a3510">↳ Others (Non-Liquid)</option>
+            <option value="pension"   data-color="#a0a0d4">Pension</option>
+          </select>
+        </div>
         <div class="delta neu" id="delta-badge">— over period</div>
       </div>
 
-      <div class="pills" id="pills">
-        <div class="pill active" data-key="netWorth"    data-color="#d4a853">NET WORTH</div>
-        <div class="pill"        data-key="assets"      data-color="#6db89a">ASSETS</div>
-        <div class="pill"        data-key="liabilities" data-color="#e07b6b">LIABILITIES</div>
-        <div class="pill"        data-key="liquid"      data-color="#4ecdc4">LIQUID FUNDS</div>
-        <div class="pill"        data-key="nonLiquid"   data-color="#f7a072">NON-LIQUID FUNDS</div>
-        <div class="pill"        data-key="pension"     data-color="#a0a0d4">PENSION</div>
-      </div>
+      <div class="active-metric-label" id="active-metric-label">NET WORTH</div>
 
       <div class="canvas-wrap">
         <canvas id="main-chart"></canvas>
@@ -466,25 +455,22 @@ function updateFundBreakdowns() {
   document.getElementById("liquid-total").textContent    = fmt(latest.liquid);
   document.getElementById("nonliquid-total").textContent = fmt(latest.nonLiquid);
 
-  renderFundBreakdown("liquid-breakdown", "liquid-select",
+  renderFundBreakdown("liquid-breakdown",
     LIQUID_KEYS, LIQUID_LABELS, LIQUID_COLORS, latest, latest.liquid);
 
-  renderFundBreakdown("nonliquid-breakdown", "nonliquid-select",
+  renderFundBreakdown("nonliquid-breakdown",
     NONLIQUID_KEYS, NONLIQUID_LABELS, NONLIQUID_COLORS, latest, latest.nonLiquid);
 }
 
-function renderFundBreakdown(containerId, selectId, keys, labels, colors, latest, total) {
-  const sel = document.getElementById(selectId).value;
+function renderFundBreakdown(containerId, keys, labels, colors, latest, total) {
   const container = document.getElementById(containerId);
   container.innerHTML = "";
 
   keys.forEach((k, i) => {
     const val = latest[k] || 0;
-    if (sel !== "all" && sel !== k) return;
-
     const pct = total > 0 ? (val / total) * 100 : 0;
     const row = document.createElement("div");
-    row.className = "fund-row" + (sel === k ? " selected" : "");
+    row.className = "fund-row";
     row.innerHTML = `
       <span class="fund-name">${labels[k]}</span>
       <div class="fund-bar-wrap">
@@ -613,34 +599,16 @@ function refresh() {
   buildBarChart(data);
 }
 
-// ── pill click ────────────────────────────────────────────────────────────
-document.getElementById("pills").addEventListener("click", e => {
-  const pill = e.target.closest(".pill");
-  if (!pill) return;
-  document.querySelectorAll(".pill").forEach(p => {
-    p.classList.remove("active");
-    p.style.background = p.style.color = p.style.borderColor = "";
-  });
-  pill.classList.add("active");
-  activeKey   = pill.dataset.key;
-  activeColor = pill.dataset.color;
-  pill.style.background   = activeColor + "22";
-  pill.style.color        = activeColor;
-  pill.style.borderColor  = activeColor;
+// ── metric dropdown change ────────────────────────────────────────────────
+document.getElementById("metric-select").addEventListener("change", e => {
+  const sel = e.target;
+  const opt = sel.options[sel.selectedIndex];
+  activeKey   = sel.value;
+  activeColor = opt.dataset.color || "#d4a853";
+  const label = document.getElementById("active-metric-label");
+  label.textContent = opt.text.replace(/^↳\s*/, "").toUpperCase();
+  label.style.color = activeColor;
   refresh();
-});
-
-// ── fund select change ────────────────────────────────────────────────────
-document.getElementById("liquid-select").addEventListener("change", () => {
-  const latest = allData[allData.length - 1];
-  if (latest) renderFundBreakdown("liquid-breakdown","liquid-select",
-    LIQUID_KEYS, LIQUID_LABELS, LIQUID_COLORS, latest, latest.liquid);
-});
-
-document.getElementById("nonliquid-select").addEventListener("change", () => {
-  const latest = allData[allData.length - 1];
-  if (latest) renderFundBreakdown("nonliquid-breakdown","nonliquid-select",
-    NONLIQUID_KEYS, NONLIQUID_LABELS, NONLIQUID_COLORS, latest, latest.nonLiquid);
 });
 
 // ── date range change ─────────────────────────────────────────────────────
@@ -660,10 +628,8 @@ async function init() {
     updateCards();
     updateFundBreakdowns();
 
-    const firstPill = document.querySelector(".pill.active");
-    firstPill.style.background  = activeColor + "22";
-    firstPill.style.color       = activeColor;
-    firstPill.style.borderColor = activeColor;
+    const label = document.getElementById("active-metric-label");
+    label.style.color = activeColor;
     refresh();
   } catch(err) {
     document.getElementById("loading").style.display   = "none";
